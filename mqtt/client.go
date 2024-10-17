@@ -75,10 +75,10 @@ func NewCloudClient(endpoint, deviceId, username, password string) (*Client, err
 }
 
 func (c *Client) Connect() error {
-	fmt.Println("connecting...")
 	if token := c.mqtt.Connect(); token.Wait() && token.Error() != nil {
 		return token.Error()
 	}
+	fmt.Println("mqtt client connected")
 	return nil
 }
 
@@ -88,9 +88,9 @@ func (c *Client) Disconnect() {
 
 func (c *Client) Subscribe(msgs chan<- Message) {
 	topic := c.reportTopic()
-	fmt.Printf("subscribe %s\n", topic)
 	c.msgs = msgs
 	c.mqtt.Subscribe(topic, 1, c.handle)
+	fmt.Printf("mqtt client subscribed, topic=%s\n", topic)
 }
 
 func (c *Client) handle(_ mqtt.Client, msg mqtt.Message) {

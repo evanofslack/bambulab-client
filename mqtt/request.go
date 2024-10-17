@@ -26,11 +26,11 @@ func newPushingData() PushingData {
 
 // Send pushing.pushall request to broker
 func (c *Client) PublishPushAll(ctx context.Context) error {
-	fmt.Printf("publish, cmd=%s\n", "pushall")
 	data := newPushingData()
 	b, err := json.Marshal(data)
 	if err != nil {
 		return err
 	}
+	fmt.Printf("mqtt client published, cmd=%s\n", "pushall")
 	return c.publish(ctx, b)
 }
