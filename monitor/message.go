@@ -6,11 +6,11 @@ import (
 	mqtt "github.com/evanofslack/bambulab-client/mqtt"
 )
 
-// mergeState compares original state to an incoming (partial) state update from
+// mergeMessage compares original message to an incoming (partial) message update from
 // mqtt message. If incoming message has a given field, and the field is different than
-// the current state, update the current state.
+// the current message, update the current message.
 // Returns true if an update was made (aka the state changed).
-func mergeState(og *mqtt.Message, in *mqtt.Message) (*mqtt.Message, bool) {
+func mergeMessage(og *mqtt.Message, in *mqtt.Message) (*mqtt.Message, bool) {
 	changed := false
 	// No data, nothing to merge
 	if in == nil || in.Print == nil {
