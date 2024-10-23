@@ -4,6 +4,7 @@ go 1.22.0
 
 require (
 	github.com/eclipse/paho.mqtt.golang v1.5.0
+	github.com/moznion/go-optional v0.12.0
 	github.com/stretchr/testify v1.9.0
 )
 
