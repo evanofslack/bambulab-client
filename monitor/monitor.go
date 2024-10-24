@@ -12,8 +12,9 @@ type Monitor struct {
 	LastUpdate     time.Time
 	Update         chan struct{}
 	PrintStarted   chan struct{}
-	PrintCancelled chan struct{}
 	PrintFinished  chan struct{}
+	PrintCancelled chan struct{}
+	PrintFailed chan struct{}
 	messageHistory *messageHistory
 	stateHistory   *stateHistory
 	ctx            context.Context
@@ -28,8 +29,9 @@ func New() *Monitor {
 		messageHistory: newMessageHistory(),
 		stateHistory:   newStateHistory(),
 		PrintStarted:   make(chan struct{}),
-		PrintCancelled: make(chan struct{}),
 		PrintFinished:  make(chan struct{}),
+		PrintCancelled: make(chan struct{}),
+		PrintFailed: make(chan struct{}),
 		ctx:            ctx,
 		cancel:         cancel,
 	}
@@ -106,7 +108,14 @@ func (m *Monitor) handleChange(newMsg *mqtt.Message) {
 		default:
 		}
 	}
-
+	if isPrintFinished(m.stateHistory.current, m.stateHistory.previous) {
+		select {
+		case <-m.ctx.Done():
+			return
+		case m.PrintFinished <- struct{}{}:
+		default:
+		}
+	}
 	if isPrintCancelled(m.stateHistory.current) {
 		select {
 		case <-m.ctx.Done():
@@ -115,12 +124,11 @@ func (m *Monitor) handleChange(newMsg *mqtt.Message) {
 		default:
 		}
 	}
-
-	if isPrintFinished(m.stateHistory.current, m.stateHistory.previous) {
+	if isPrintFailed(m.stateHistory.current, m.stateHistory.previous) {
 		select {
 		case <-m.ctx.Done():
 			return
-		case m.PrintFinished <- struct{}{}:
+		case m.PrintFailed <- struct{}{}:
 		default:
 		}
 	}
@@ -161,6 +169,23 @@ func isPrintCancelled(curr State) bool {
 	cancelled := cerr == 50348044
 	return cancelled
 }
+
+func isPrintFailed(curr, prev State) bool {
+	if curr.Gcode.State.IsNone() {
+		return false
+	}
+	cstate := curr.Gcode.State.Unwrap()
+	if cstate == "FAILED" && prev.Gcode.State.IsNone() {
+		return true
+	}
+	if prev.Gcode.State.IsNone() {
+		return false
+	}
+	pstate := prev.Gcode.State.Unwrap()
+	finished := cstate == "FAILED" && pstate != "FAILED"
+	return finished
+}
+
 
 type messageHistory struct {
 	current  *mqtt.Message

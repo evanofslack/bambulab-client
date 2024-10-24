@@ -12,13 +12,15 @@ import (
 
 var (
 	// Create mock messages to simulate print start, finish, and cancellation.
-	stateIdle      = "IDLE"
-	stateRunning   = "RUNNING"
-	stateFinished  = "FINISH"
-	msgIdle        = newStateMsg(stateIdle)
-	msgRunning     = newStateMsg(stateRunning)
-	msgFinished    = newStateMsg(stateFinished)
-	msgCancelled   = newCancelMsg()
+	stateIdle     = "IDLE"
+	stateRunning  = "RUNNING"
+	stateFinished = "FINISH"
+	stateFailed   = "FAILED"
+	msgIdle       = newStateMsg(stateIdle)
+	msgRunning    = newStateMsg(stateRunning)
+	msgFinished   = newStateMsg(stateFinished)
+	msgFailed     = newStateMsg(stateFailed)
+	msgCancelled  = newCancelMsg()
 )
 
 // TestNewMonitor tests the creation of a new Monitor.
@@ -183,6 +185,39 @@ func TestMonitor_PrintCancel(t *testing.T) {
 	wg.Wait()
 }
 
+func TestMonitor_PrintFail(t *testing.T) {
+	ctx := context.Background()
+	monitor := New()
+	defer monitor.Stop()
+
+	readyChan := make(chan struct{})
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		// communicate back validation thread is ready
+		if err := signalReady(ctx, readyChan); err != nil {
+			t.Error(err)
+		}
+
+		select {
+		case <-ctx.Done():
+			t.Error("expected print cancelled event to be triggered")
+			return
+		case <-monitor.PrintFailed:
+		}
+	}()
+	// wait for validation thread to be ready
+	if err := waitReady(ctx, readyChan); err != nil {
+		t.Error(err)
+	}
+	// Simulate print cancellation.
+	monitor.handleChange(&msgFailed)
+
+	wg.Wait()
+}
+
 func signalReady(ctx context.Context, r chan struct{}) error {
 	select {
 	case <-ctx.Done():
@@ -212,7 +247,7 @@ func newStateMsg(state string) mqtt.Message {
 }
 
 func newCancelMsg() mqtt.Message {
-    e := 50348044
+	e := 50348044
 	msg := mqtt.Message{
 		Print: &mqtt.Print{
 			PrintError: &e,
