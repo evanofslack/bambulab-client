@@ -27,6 +27,9 @@ func New() *Monitor {
 		Update:         make(chan struct{}),
 		messageHistory: newMessageHistory(),
 		stateHistory:   newStateHistory(),
+		PrintStarted:   make(chan struct{}),
+		PrintCancelled: make(chan struct{}),
+		PrintFinished:  make(chan struct{}),
 		ctx:            ctx,
 		cancel:         cancel,
 	}
@@ -134,15 +137,6 @@ func isPrintStarted(curr, prev State) bool {
 	return started
 }
 
-func isPrintCancelled(curr State) bool {
-	if curr.CurrentPrint.PrintError.IsNone() {
-		return false
-	}
-	cerr := curr.CurrentPrint.PrintError.Unwrap()
-	cancelled := cerr == 50348044
-	return cancelled
-}
-
 func isPrintFinished(curr, prev State) bool {
 	if curr.Gcode.State.IsNone() {
 		return false
@@ -157,6 +151,15 @@ func isPrintFinished(curr, prev State) bool {
 	pstate := prev.Gcode.State.Unwrap()
 	finished := cstate == "FINISH" && pstate != "FINISH"
 	return finished
+}
+
+func isPrintCancelled(curr State) bool {
+	if curr.CurrentPrint.PrintError.IsNone() {
+		return false
+	}
+	cerr := curr.CurrentPrint.PrintError.Unwrap()
+	cancelled := cerr == 50348044
+	return cancelled
 }
 
 type messageHistory struct {
