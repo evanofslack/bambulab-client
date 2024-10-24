@@ -78,8 +78,9 @@ type CurrentPrint struct {
 	LayerNumber       opt.Option[int]
 	LayerNumberTarget opt.Option[int]
 	Percent           opt.Option[int]
-	Subtask           opt.Option[string]
 	PrintError        opt.Option[int]
+	Subtask           opt.Option[string]
+	TimeRemaining     opt.Option[int]
 }
 
 type Fans struct {
@@ -248,6 +249,7 @@ func interpretCurrentPrint(p *mqtt.Print) CurrentPrint {
 	c.LayerNumberTarget = opt.FromNillable(p.TotalLayerNum)
 	c.Percent = opt.FromNillable(p.McPercent)
 	c.Subtask = opt.FromNillable(p.SubtaskName)
+	c.TimeRemaining = opt.FromNillable(p.McRemainingTime)
 	c.PrintError = opt.FromNillable(p.PrintError)
 	return c
 }
